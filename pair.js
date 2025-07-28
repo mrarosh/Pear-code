@@ -44,7 +44,7 @@ router.get("/", async (req, res) => {
   let sessionId = null;
   let responseSent = false;
   let connectionTimeout = null;
-  let cleanupTimeout = null;
+  let operationTimeout = null;
   
   try {
     let num = req.query.number;
@@ -69,7 +69,7 @@ router.get("/", async (req, res) => {
     // Create unique session ID
     sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Create WhatsApp connection with optimized settings
+    // Create WhatsApp connection with minimal settings
     const authState = createAuthState(sessionId);
     
     sock = makeWASocket({
@@ -77,33 +77,40 @@ router.get("/", async (req, res) => {
       printQRInTerminal: false,
       logger: pino({ level: "fatal" }),
       browser: Browsers.macOS("Safari"),
-      connectTimeoutMs: 20000, // Reduced timeout
-      keepAliveIntervalMs: 10000, // More frequent keep-alive
-      retryRequestDelayMs: 1000,
-      maxRetries: 2,
+      connectTimeoutMs: 15000, // 15 second connection timeout
+      keepAliveIntervalMs: 5000, // Very frequent keep-alive
+      retryRequestDelayMs: 500,
+      maxRetries: 1,
       emitOwnEvents: false,
       shouldIgnoreJid: jid => jid.includes('@broadcast'),
       markOnlineOnConnect: false,
       generateHighQualityLinkPreview: false,
       getMessage: async () => {
         return { conversation: 'hello' }
+      },
+      // Disable features that might cause issues
+      fireInitQueries: false,
+      auth: {
+        creds: authState.creds,
+        keys: authState.keys,
+        saveCreds: authState.saveCreds
       }
     });
 
     let connectionEstablished = false;
     let pairingCodeGenerated = false;
 
-    // Set connection timeout
-    connectionTimeout = setTimeout(() => {
+    // Set operation timeout (total time for the entire operation)
+    operationTimeout = setTimeout(() => {
       if (!responseSent) {
         responseSent = true;
         res.status(408).json({ 
-          error: "Connection timeout - please try again",
-          code: "CONNECTION_TIMEOUT"
+          error: "Operation timeout - please try again",
+          code: "OPERATION_TIMEOUT"
         });
         cleanup();
       }
-    }, 20000); // 20 second connection timeout
+    }, 15000); // 15 second total timeout
 
     // Handle connection updates
     sock.ev.on("connection.update", async (update) => {
@@ -116,20 +123,20 @@ router.get("/", async (req, res) => {
       if (connection === "open" && !connectionEstablished) {
         connectionEstablished = true;
         
-        // Clear connection timeout
-        if (connectionTimeout) {
-          clearTimeout(connectionTimeout);
-          connectionTimeout = null;
-        }
-        
         try {
-          // Wait a bit for connection to stabilize
-          await delay(2000);
+          // Minimal delay for connection stabilization
+          await delay(1000);
           
           if (!sock.authState.creds.registered && !pairingCodeGenerated) {
             pairingCodeGenerated = true;
             
-            const code = await sock.requestPairingCode(num);
+            // Request pairing code with timeout
+            const codePromise = sock.requestPairingCode(num);
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Pairing code request timeout')), 10000)
+            );
+            
+            const code = await Promise.race([codePromise, timeoutPromise]);
             
             if (!responseSent) {
               responseSent = true;
@@ -141,10 +148,8 @@ router.get("/", async (req, res) => {
               });
             }
             
-            // Schedule cleanup
-            cleanupTimeout = setTimeout(() => {
-              cleanup();
-            }, 5000); // Cleanup after 5 seconds
+            // Immediate cleanup
+            cleanup();
             
           } else if (sock.authState.creds.registered && !responseSent) {
             responseSent = true;
@@ -170,19 +175,14 @@ router.get("/", async (req, res) => {
         const shouldReconnect = (lastDisconnect?.error) instanceof Error && 
           lastDisconnect.error.message !== DisconnectReason.loggedOut;
         
-        if (shouldReconnect && !pairingCodeGenerated && !responseSent) {
-          console.log("Connection closed, attempting to reconnect...");
-          // Don't attempt reconnection in serverless - just return error
+        if (!responseSent) {
           responseSent = true;
-          res.status(500).json({ 
-            error: "Connection lost. Please try again.",
-            code: "CONNECTION_LOST"
-          });
-          cleanup();
-        } else if (!shouldReconnect) {
-          console.log("Connection closed permanently");
-          if (!responseSent) {
-            responseSent = true;
+          if (shouldReconnect) {
+            res.status(500).json({ 
+              error: "Connection lost. Please try again.",
+              code: "CONNECTION_LOST"
+            });
+          } else {
             res.status(500).json({ 
               error: "Connection failed. Please try again.",
               code: "CONNECTION_FAILED"
@@ -199,27 +199,20 @@ router.get("/", async (req, res) => {
     // Cleanup function
     const cleanup = () => {
       // Clear timeouts
-      if (connectionTimeout) {
-        clearTimeout(connectionTimeout);
-        connectionTimeout = null;
-      }
-      if (cleanupTimeout) {
-        clearTimeout(cleanupTimeout);
-        cleanupTimeout = null;
+      if (operationTimeout) {
+        clearTimeout(operationTimeout);
+        operationTimeout = null;
       }
       
       // Clean up socket
       if (sock) {
         try {
-          // Only end if connection is established
-          if (sock.user && sock.user.id) {
-            sock.end();
-          } else {
-            // Force close if not properly connected
-            sock.ws?.close();
+          // Force close the WebSocket
+          if (sock.ws) {
+            sock.ws.close();
           }
         } catch (e) {
-          console.log("Error ending socket:", e);
+          console.log("Error closing socket:", e);
         }
         sock = null;
       }
@@ -250,8 +243,7 @@ router.get("/", async (req, res) => {
     }
     
     // Cleanup on error
-    if (connectionTimeout) clearTimeout(connectionTimeout);
-    if (cleanupTimeout) clearTimeout(cleanupTimeout);
+    if (operationTimeout) clearTimeout(operationTimeout);
     if (sock) {
       try {
         sock.ws?.close();
