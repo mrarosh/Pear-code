@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ONYX MD - WhatsApp Pairing</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Animated background particles */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+      animation: float 20s ease-in-out infinite;
+      z-index: -1;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      33% { transform: translateY(-20px) rotate(1deg); }
+      66% { transform: translateY(10px) rotate(-1deg); }
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%;
+      max-width: 450px;
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    .glass-card:hover::before {
+      left: 100%;
+    }
+
+    .glass-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .logo i {
+      font-size: 32px;
+      color: white;
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 30px;
+      line-height: 1.5;
+    }
+
+    .input-group {
+      margin-bottom: 25px;
+    }
+
+    .input-container {
+      position: relative;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 4px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .input-container:focus-within {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+    }
+
+    .phone-input {
+      width: 100%;
+      padding: 16px 20px;
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 16px;
+      outline: none;
+      border-radius: 12px;
+    }
+
+    .phone-input::placeholder {
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border: none;
+      border-radius: 16px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .submit-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .submit-btn:hover::before {
+      left: 100%;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .submit-btn:active {
+      transform: translateY(0);
+    }
+
+    .loading-spinner {
+      display: none;
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .result-container {
+      margin-top: 25px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: none;
+    }
+
+    .code-display {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 15px;
+      border-radius: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .code-display:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.02);
+    }
+
+    .code-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: white;
+      user-select: none;
+    }
+
+    .copy-icon {
+      margin-left: 10px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .error-message {
+      color: #ff6b6b;
+      text-align: center;
+      margin-top: 15px;
+      padding: 12px;
+      background: rgba(255, 107, 107, 0.1);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 107, 107, 0.3);
+    }
+
+    .success-message {
+      color: #51cf66;
+      text-align: center;
+      margin-top: 15px;
+      padding: 12px;
+      background: rgba(81, 207, 102, 0.1);
+      border-radius: 12px;
+      border: 1px solid rgba(81, 207, 102, 0.3);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 480px) {
+      .glass-card {
+        padding: 30px 20px;
+        margin: 10px;
+      }
+
+      .title {
+        font-size: 24px;
+      }
+
+      .subtitle {
+        font-size: 14px;
+      }
+
+      .logo {
+        width: 60px;
+        height: 60px;
+      }
+
+      .logo i {
+        font-size: 24px;
+      }
+    }
+
+    /* Floating animation for background elements */
+    .floating {
+      animation: floating 3s ease-in-out infinite;
+    }
+
+    @keyframes floating {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="glass-card floating">
+      <div class="header">
+        <div class="logo">
+          <i class="fab fa-whatsapp"></i>
+        </div>
+        <h1 class="title">ONYX MD</h1>
+        <p class="subtitle">🔢 Enter your WhatsApp number with country code to get your pairing code</p>
+      </div>
+
+      <div class="input-group">
+        <div class="input-container">
+          <input 
+            type="tel" 
+            id="number" 
+            class="phone-input" 
+            placeholder="+94704xxxxxx"
+            autocomplete="tel"
+          >
+        </div>
+      </div>
+
+      <button id="submit" class="submit-btn">
+        <i class="fas fa-paper-plane"></i> Get Pairing Code
+      </button>
+
+      <div id="loading-spinner" class="loading-spinner">
+        <div class="spinner"></div>
+        <p style="color: rgba(255, 255, 255, 0.8); margin-top: 10px;">Generating your code...</p>
+      </div>
+
+      <div id="result-container" class="result-container">
+        <div id="code-display" class="code-display">
+          <span id="code-text" class="code-text"></span>
+          <i class="fas fa-copy copy-icon"></i>
+        </div>
+        <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-top: 10px; text-align: center;">
+          Click to copy the code
+        </p>
+      </div>
+
+      <div id="error-message" class="error-message" style="display: none;"></div>
+      <div id="success-message" class="success-message" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>
+  <script>
+    const submitBtn = document.getElementById("submit");
+    const numberInput = document.getElementById("number");
+    const loadingSpinner = document.getElementById("loading-spinner");
+    const resultContainer = document.getElementById("result-container");
+    const codeDisplay = document.getElementById("code-display");
+    const codeText = document.getElementById("code-text");
+    const errorMessage = document.getElementById("error-message");
+    const successMessage = document.getElementById("success-message");
+
+    // Format phone number as user types
+    numberInput.addEventListener("input", function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length > 0) {
+        value = "+" + value;
+      }
+      e.target.value = value;
+    });
+
+    // Copy code function
+    async function copyCode() {
+      const code = codeText.textContent.replace('CODE: ', '');
+      try {
+        await navigator.clipboard.writeText(code);
+        showSuccess("Code copied to clipboard!");
+        
+        // Visual feedback
+        codeDisplay.style.background = "rgba(81, 207, 102, 0.2)";
+        codeDisplay.style.borderColor = "rgba(81, 207, 102, 0.5)";
+        
+        setTimeout(() => {
+          codeDisplay.style.background = "rgba(255, 255, 255, 0.15)";
+          codeDisplay.style.borderColor = "rgba(255, 255, 255, 0.2)";
+        }, 2000);
+      } catch (err) {
+        showError("Failed to copy code");
+      }
+    }
+
+    // Show error message
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = "block";
+      successMessage.style.display = "none";
+      setTimeout(() => {
+        errorMessage.style.display = "none";
+      }, 5000);
+    }
+
+    // Show success message
+    function showSuccess(message) {
+      successMessage.textContent = message;
+      successMessage.style.display = "block";
+      errorMessage.style.display = "none";
+      setTimeout(() => {
+        successMessage.style.display = "none";
+      }, 3000);
+    }
+
+    // Handle form submission
+    submitBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      
+      const number = numberInput.value.replace(/\D/g, '');
+      
+      // Validation
+      if (!number) {
+        showError("❗ Please enter your WhatsApp number with country code");
+        return;
+      }
+      
+      if (number.length < 11) {
+        showError("❗ Invalid number format. Please include country code");
+        return;
+      }
+
+      // Show loading
+      loadingSpinner.style.display = "block";
+      resultContainer.style.display = "none";
+      errorMessage.style.display = "none";
+      successMessage.style.display = "none";
+      
+      // Disable button
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = "0.7";
+
+      try {
+        const response = await axios.get(`/code?number=${number}`);
+        const code = response.data.code || "❗ Service Unavailable";
+        
+        // Display result
+        codeText.textContent = `CODE: ${code}`;
+        resultContainer.style.display = "block";
+        
+        // Add click event to copy
+        codeDisplay.onclick = copyCode;
+        
+      } catch (error) {
+        showError("❗ Service unavailable. Please try again later.");
+        console.error("Error:", error);
+      } finally {
+        // Hide loading
+        loadingSpinner.style.display = "none";
+        
+        // Re-enable button
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = "1";
+      }
+    });
+
+    // Enter key support
+    numberInput.addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        submitBtn.click();
+      }
+    });
+
+    // Focus animation
+    numberInput.addEventListener("focus", function() {
+      this.parentElement.style.transform = "scale(1.02)";
+    });
+
+    numberInput.addEventListener("blur", function() {
+      this.parentElement.style.transform = "scale(1)";
+    });
+  </script>
+</body>
+</html>
