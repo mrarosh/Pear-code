@@ -40,6 +40,9 @@ const createAuthState = (sessionId) => {
 };
 
 router.get("/", async (req, res) => {
+  let sock = null;
+  let sessionId = null;
+  
   try {
     let num = req.query.number;
     
@@ -61,35 +64,45 @@ router.get("/", async (req, res) => {
     }
 
     // Create unique session ID
-    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Create WhatsApp connection
+    // Create WhatsApp connection with optimized settings
     const authState = createAuthState(sessionId);
     
-    const sock = makeWASocket({
+    sock = makeWASocket({
       auth: authState,
       printQRInTerminal: false,
       logger: pino({ level: "fatal" }),
       browser: Browsers.macOS("Safari"),
-      connectTimeoutMs: 60000,
-      keepAliveIntervalMs: 30000,
+      connectTimeoutMs: 30000, // Reduced timeout
+      keepAliveIntervalMs: 15000, // More frequent keep-alive
+      retryRequestDelayMs: 2000,
+      maxRetries: 3,
+      emitOwnEvents: false,
+      shouldIgnoreJid: jid => jid.includes('@broadcast'),
     });
+
+    let connectionEstablished = false;
+    let pairingCodeGenerated = false;
 
     // Handle connection updates
     sock.ev.on("connection.update", async (update) => {
       const { connection, lastDisconnect, qr } = update;
       
       if (qr) {
-        // QR code generated - this means we need to scan
         console.log("QR Code generated for:", num);
       }
       
-      if (connection === "open") {
+      if (connection === "open" && !connectionEstablished) {
+        connectionEstablished = true;
+        
         try {
-          // Connection is open, request pairing code
-          await delay(2000);
+          // Wait a bit for connection to stabilize
+          await delay(3000);
           
-          if (!sock.authState.creds.registered) {
+          if (!sock.authState.creds.registered && !pairingCodeGenerated) {
+            pairingCodeGenerated = true;
+            
             const code = await sock.requestPairingCode(num);
             
             if (!res.headersSent) {
@@ -101,25 +114,23 @@ router.get("/", async (req, res) => {
               });
             }
             
-            // Clean up session after 5 minutes
+            // Clean up session after 2 minutes (reduced time)
             setTimeout(() => {
               sessions.delete(sessionId);
-            }, 300000);
+            }, 120000);
             
-          } else {
-            if (!res.headersSent) {
-              res.status(400).json({ 
-                error: "Number already registered",
-                code: "ALREADY_REGISTERED"
-              });
-            }
+          } else if (sock.authState.creds.registered && !res.headersSent) {
+            res.status(400).json({ 
+              error: "Number already registered",
+              code: "ALREADY_REGISTERED"
+            });
           }
           
         } catch (error) {
           console.error("Error requesting pairing code:", error);
           if (!res.headersSent) {
             res.status(500).json({ 
-              error: "Failed to generate pairing code",
+              error: "Failed to generate pairing code. Please try again.",
               code: "GENERATION_FAILED"
             });
           }
@@ -128,8 +139,15 @@ router.get("/", async (req, res) => {
         const shouldReconnect = (lastDisconnect?.error) instanceof Error && 
           lastDisconnect.error.message !== DisconnectReason.loggedOut;
         
-        if (shouldReconnect) {
+        if (shouldReconnect && !pairingCodeGenerated) {
           console.log("Connection closed, attempting to reconnect...");
+          // Don't attempt reconnection in serverless - just return error
+          if (!res.headersSent) {
+            res.status(500).json({ 
+              error: "Connection lost. Please try again.",
+              code: "CONNECTION_LOST"
+            });
+          }
         } else {
           console.log("Connection closed permanently");
           sessions.delete(sessionId);
@@ -149,15 +167,36 @@ router.get("/", async (req, res) => {
         });
         sessions.delete(sessionId);
       }
-    }, 30000); // 30 second timeout
+    }, 25000); // Reduced timeout to 25 seconds
 
   } catch (error) {
     console.error("Error in pairing process:", error);
     if (!res.headersSent) {
       res.status(500).json({ 
-        error: "Service temporarily unavailable",
+        error: "Service temporarily unavailable. Please try again.",
         code: "SERVICE_ERROR"
       });
+    }
+  } finally {
+    // Cleanup function
+    const cleanup = () => {
+      if (sock) {
+        try {
+          sock.end();
+        } catch (e) {
+          console.log("Error ending socket:", e);
+        }
+      }
+      if (sessionId) {
+        sessions.delete(sessionId);
+      }
+    };
+    
+    // Cleanup after response is sent
+    if (res.headersSent) {
+      setTimeout(cleanup, 1000);
+    } else {
+      cleanup();
     }
   }
 });
