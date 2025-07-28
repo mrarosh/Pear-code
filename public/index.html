@@ -351,7 +351,7 @@
       <div id="loading-spinner" class="loading-spinner">
         <div class="spinner"></div>
         <p style="color: rgba(255, 255, 255, 0.8); margin-top: 10px;">Connecting to WhatsApp...</p>
-        <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-top: 5px;">This may take up to 30 seconds</p>
+        <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-top: 5px;">This may take up to 15 seconds</p>
       </div>
 
       <div id="result-container" class="result-container">
@@ -458,7 +458,7 @@
 
       try {
         const response = await axios.get(`/code?number=${number}`, {
-          timeout: 30000 // 30 second timeout
+          timeout: 20000 // 20 second timeout
         });
         
         if (response.data.error) {
@@ -483,9 +483,15 @@
         } else if (error.code === "NETWORK_ERROR" || error.message?.includes('Network Error')) {
           showError("❗ Network error. Please check your connection.");
         } else if (error.response?.status === 408) {
-          showError("❗ Request timeout. Please try again.");
+          showError("❗ Connection timeout. Please try again.");
         } else if (error.response?.status === 500) {
           showError("❗ Server error. Please try again in a moment.");
+        } else if (error.response?.data?.code === "OPERATION_TIMEOUT") {
+          showError("❗ Operation timeout. Please try again.");
+        } else if (error.response?.data?.code === "CONNECTION_LOST") {
+          showError("❗ Connection lost. Please try again.");
+        } else if (error.response?.data?.code === "CONNECTION_FAILED") {
+          showError("❗ Connection failed. Please try again.");
         } else {
           showError("❗ Service unavailable. Please try again later.");
         }
