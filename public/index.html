@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ONYX MD - WhatsApp Pairing</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     * {
@@ -349,7 +350,8 @@
 
       <div id="loading-spinner" class="loading-spinner">
         <div class="spinner"></div>
-        <p style="color: rgba(255, 255, 255, 0.8); margin-top: 10px;">Generating your code...</p>
+        <p style="color: rgba(255, 255, 255, 0.8); margin-top: 10px;">Connecting to WhatsApp...</p>
+        <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-top: 5px;">This may take up to 30 seconds</p>
       </div>
 
       <div id="result-container" class="result-container">
@@ -358,7 +360,7 @@
           <i class="fas fa-copy copy-icon"></i>
         </div>
         <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-top: 10px; text-align: center;">
-          Click to copy the code
+          Click to copy the code | Use this code in WhatsApp Web
         </p>
       </div>
 
@@ -455,7 +457,15 @@
       submitBtn.style.opacity = "0.7";
 
       try {
-        const response = await axios.get(`/code?number=${number}`);
+        const response = await axios.get(`/code?number=${number}`, {
+          timeout: 30000 // 30 second timeout
+        });
+        
+        if (response.data.error) {
+          showError(`❗ ${response.data.error}`);
+          return;
+        }
+        
         const code = response.data.code || "❗ Service Unavailable";
         
         // Display result
@@ -466,7 +476,19 @@
         codeDisplay.onclick = copyCode;
         
       } catch (error) {
-        showError("❗ Service unavailable. Please try again later.");
+        if (error.response && error.response.data && error.response.data.error) {
+          showError(`❗ ${error.response.data.error}`);
+        } else if (error.code === "TIMEOUT" || error.message?.includes('timeout')) {
+          showError("❗ Request timed out. Please try again.");
+        } else if (error.code === "NETWORK_ERROR" || error.message?.includes('Network Error')) {
+          showError("❗ Network error. Please check your connection.");
+        } else if (error.response?.status === 408) {
+          showError("❗ Request timeout. Please try again.");
+        } else if (error.response?.status === 500) {
+          showError("❗ Server error. Please try again in a moment.");
+        } else {
+          showError("❗ Service unavailable. Please try again later.");
+        }
         console.error("Error:", error);
       } finally {
         // Hide loading
