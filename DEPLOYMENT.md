@@ -78,6 +78,7 @@ PP-code-main/
 - ✅ **Responsive**: Works on all devices
 - ✅ **Health Check**: `/health` endpoint for monitoring
 - ✅ **Static File Serving**: Optimized for Vercel
+- ✅ **Vercel Compatible**: No filesystem operations, serverless-ready
 
 ### Available Endpoints
 
@@ -90,6 +91,14 @@ PP-code-main/
 1. **Styling**: Edit `public/index.html` to customize the appearance
 2. **Logic**: Modify `pair.js` to change pairing code generation
 3. **Configuration**: Update `vercel.json` for routing changes
+
+### Important Notes
+
+⚠️ **Vercel Limitations**: This version has been simplified to work with Vercel's serverless environment:
+- No filesystem operations (session storage)
+- No external WhatsApp API integration
+- Generates demo pairing codes for demonstration purposes
+- For full WhatsApp integration, consider using a traditional hosting service
 
 ### Troubleshooting
 
