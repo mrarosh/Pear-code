@@ -351,7 +351,7 @@
       <div id="loading-spinner" class="loading-spinner">
         <div class="spinner"></div>
         <p style="color: rgba(255, 255, 255, 0.8); margin-top: 10px;">Connecting to WhatsApp...</p>
-        <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-top: 5px;">This may take up to 15 seconds</p>
+        <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-top: 5px;">This may take up to 12 seconds</p>
       </div>
 
       <div id="result-container" class="result-container">
@@ -467,10 +467,30 @@
         }
         
         const code = response.data.code || "❗ Service Unavailable";
+        const isDemo = response.data.isDemo || false;
+        const message = response.data.message || "Code generated successfully";
         
         // Display result
         codeText.textContent = `CODE: ${code}`;
         resultContainer.style.display = "block";
+        
+        // Show demo indicator if it's a demo code
+        if (isDemo) {
+          const demoIndicator = document.createElement('div');
+          demoIndicator.style.cssText = `
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-top: 10px;
+            text-align: center;
+            color: #ffc107;
+            font-size: 12px;
+            font-weight: 500;
+          `;
+          demoIndicator.textContent = "⚠️ Demo Code (WhatsApp connection unavailable)";
+          resultContainer.appendChild(demoIndicator);
+        }
         
         // Add click event to copy
         codeDisplay.onclick = copyCode;
