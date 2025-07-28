@@ -4,12 +4,13 @@ A modern, responsive web application for generating WhatsApp pairing codes with 
 
 ## 🌟 Features
 
-- **WhatsApp Pairing**: Generate pairing codes for WhatsApp numbers
+- **Real WhatsApp Integration**: Actual WhatsApp Web pairing code generation
 - **Modern UI**: Beautiful glass-morphism design with animations
 - **Responsive**: Works perfectly on all devices
-- **Real-time**: Instant code generation
+- **Real-time**: Live WhatsApp connection and code generation
 - **Copy to Clipboard**: One-click code copying
 - **Health Monitoring**: Built-in health check endpoint
+- **Vercel Compatible**: In-memory session storage for serverless deployment
 
 ## 🚀 Quick Deploy to Vercel
 

@@ -94,11 +94,11 @@ PP-code-main/
 
 ### Important Notes
 
-⚠️ **Vercel Limitations**: This version has been simplified to work with Vercel's serverless environment:
-- No filesystem operations (session storage)
-- No external WhatsApp API integration
-- Generates demo pairing codes for demonstration purposes
-- For full WhatsApp integration, consider using a traditional hosting service
+✅ **Real WhatsApp Integration**: This version now includes actual WhatsApp Web integration:
+- In-memory session storage for Vercel compatibility
+- Real WhatsApp pairing code generation
+- Proper connection handling and error management
+- Timeout protection for serverless environment
 
 ### Troubleshooting
 
