@@ -1,10 +1,14 @@
 const express = require("express");
 const app = express();
+const path = require("path");
 __path = process.cwd();
 const bodyParser = require("body-parser");
 const PORT = process.env.PORT || 8000;
 let code = require("./pair");
 require("events").EventEmitter.defaultMaxListeners = 500;
+
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Add health check endpoint for uptime monitoring
 app.get("/health", (req, res) => {
@@ -17,8 +21,9 @@ app.get("/health", (req, res) => {
 
 app.use("/code", code);
 
-app.use("/", async (req, res, next) => {
-  res.sendFile(__path + "/pair.html");
+// Serve the main HTML file
+app.get("/", async (req, res, next) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 app.use(bodyParser.json());
